@@ -53,7 +53,7 @@ public class MainService extends Service implements AudioManager.OnAudioFocusCha
     private AudioManager am;
     private TelephonyManager tm;
     private SpeechRecognizer sr;
-    private Thread responsethread;
+    private SessionTracker st;
 
     @Override
     public IBinder onBind(Intent arg0) {
@@ -82,6 +82,8 @@ public class MainService extends Service implements AudioManager.OnAudioFocusCha
 
         sr = SpeechRecognizer.createSpeechRecognizer(this);
         sr.setRecognitionListener(new SpeechListener());
+
+        st = new SessionTracker("", 1);
 
         myApplication.registerReceiver(SMScatcher, new IntentFilter("android.provider.Telephony.SMS_RECEIVED"));
     }
@@ -126,11 +128,7 @@ public class MainService extends Service implements AudioManager.OnAudioFocusCha
                                     speakingEnd = myTTS.isSpeaking();
                                 } while (speakingEnd);
 
-                                Intent speechintent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
-                                speechintent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, "en-US");
-                                speechintent.putExtra(RecognizerIntent.EXTRA_MAX_RESULTS,1);
-                                speechintent.putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, "voice.recognition.test");
-                                sr.startListening(speechintent);
+                                startVoiceRecognition();
                             } catch (Exception e) {
                                 //Toast.makeText(MainActivity.this, R.string.TTSNotReady,Toast.LENGTH_LONG).show();
                             }
@@ -182,9 +180,7 @@ public class MainService extends Service implements AudioManager.OnAudioFocusCha
             am.setStreamVolume(AudioManager.STREAM_VOICE_CALL, am.getStreamMaxVolume(AudioManager.STREAM_VOICE_CALL), 0);
 
             if (tm.getCallState() == TelephonyManager.CALL_STATE_IDLE) {
-
                 new CountDownTimer(SMS_delay, SMS_delay / 2) {
-
                     @Override
                     public void onFinish() {
                         try {
@@ -192,18 +188,23 @@ public class MainService extends Service implements AudioManager.OnAudioFocusCha
                         } catch (Exception e) {
                             //Toast.makeText(MainActivity.this, R.string.TTSNotReady,Toast.LENGTH_LONG).show();
                         }
-
                     }
 
                     @Override
                     public void onTick(long arg0) {
 
                     }
-
                 }.start();
             }
-
         }
+    }
+
+    public void startVoiceRecognition(){
+        Intent speechintent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
+        speechintent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, "en-US");
+        speechintent.putExtra(RecognizerIntent.EXTRA_MAX_RESULTS,1);
+        speechintent.putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, "voice.recognition.test");
+        sr.startListening(speechintent);
     }
 
     public TextToSpeech.OnInitListener listenerStarted = new TextToSpeech.OnInitListener() {
@@ -227,7 +228,7 @@ public class MainService extends Service implements AudioManager.OnAudioFocusCha
             if (!clearedTTS) {
                 // clearTts();
                 Intent c = new Intent();
-                c.setAction("a2dp.vol.service.CLEAR");
+                c.setAction("MainService.CLEAR");
                 myApplication.sendBroadcast(c);
             }
 
