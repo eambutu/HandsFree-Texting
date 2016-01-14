@@ -77,8 +77,8 @@ public class MainService extends Service implements AudioManager.OnAudioFocusCha
         myApplication = this.getApplication();
         am = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
         myTTS = new TextToSpeech(myApplication, listenerStarted);
-        myTTS.setSpeechRate((float)0.5);
-        myTTS.setPitch((float)1.2);
+        myTTS.setSpeechRate((float)1);
+        myTTS.setPitch((float)1.4);
 
         sr = SpeechRecognizer.createSpeechRecognizer(this);
         sr.setRecognitionListener(new SpeechListener());
