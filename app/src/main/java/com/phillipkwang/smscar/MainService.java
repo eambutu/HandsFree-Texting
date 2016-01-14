@@ -117,21 +117,13 @@ public class MainService extends Service implements AudioManager.OnAudioFocusCha
                     message = message.trim();
 
                     String contactName = getContactDisplayNameByNumber(phonenumber);
-                    TextReader("Message from " + contactName + "... " + message + "... Say your response");
+                    TextReader("Message from " + contactName + "... " + message + "... Say your response", -1, null);
 
                     new CountDownTimer(5000, 1000) {
                         @Override
                         public void onFinish() {
-                            try {
-                                boolean speakingEnd = myTTS.isSpeaking();
-                                do {
-                                    speakingEnd = myTTS.isSpeaking();
-                                } while (speakingEnd);
-
-                                startVoiceRecognition();
-                            } catch (Exception e) {
-                                //Toast.makeText(MainActivity.this, R.string.TTSNotReady,Toast.LENGTH_LONG).show();
-                            }
+                            waitForTTS();
+                            startVoiceRecognition();
                         }
                         @Override
                         public void onTick(long arg0) {}
@@ -143,18 +135,24 @@ public class MainService extends Service implements AudioManager.OnAudioFocusCha
 
     };
 
-    public void TextReader(String rawinput) {
+    public void waitForTTS() {
+        boolean speakingDone;
+        do{
+            speakingDone = myTTS.isSpeaking();
+        } while (speakingDone);
+        return;
+    }
+
+    public void TextReader(String rawinput, final int caseNumber, String[] params) {
         if (myTTSReady) {
             final HashMap myHash = new HashMap<String, String>();
+            myHash.put(TextToSpeech.Engine.KEY_PARAM_UTTERANCE_ID, "SMSCar");
 
             if(rawinput == null){
                 //Toast.makeText(application, "No input", Toast.LENGTH_LONG).show();
                 return;
             }
-
             String input = rawinput.replaceAll("http.*? ", ", URL, ");;
-
-            myHash.put(TextToSpeech.Engine.KEY_PARAM_UTTERANCE_ID, "SMSCar");
 
             // trim off very long strings
             if (input.length() > MAX_MESSAGE_LENGTH){
@@ -168,23 +166,34 @@ public class MainService extends Service implements AudioManager.OnAudioFocusCha
                 am.setBluetoothScoOn(true);
             }
 
-            am.requestAudioFocus(new MainService(),
-                    AudioManager.STREAM_VOICE_CALL,
-                    AudioManager.AUDIOFOCUS_GAIN);
-            myHash.put(TextToSpeech.Engine.KEY_PARAM_STREAM,
-                    String.valueOf(AudioManager.STREAM_VOICE_CALL));
-
-            final String str = input;
+            am.requestAudioFocus(new MainService(), AudioManager.STREAM_VOICE_CALL, AudioManager.AUDIOFOCUS_GAIN);
+            myHash.put(TextToSpeech.Engine.KEY_PARAM_STREAM, String.valueOf(AudioManager.STREAM_VOICE_CALL));
 
             originalVolume = am.getStreamVolume(AudioManager.STREAM_VOICE_CALL);
             am.setStreamVolume(AudioManager.STREAM_VOICE_CALL, am.getStreamMaxVolume(AudioManager.STREAM_VOICE_CALL), 0);
 
+            final String str = input;
+            final int inputNumber = caseNumber;
             if (tm.getCallState() == TelephonyManager.CALL_STATE_IDLE) {
                 new CountDownTimer(SMS_delay, SMS_delay / 2) {
                     @Override
                     public void onFinish() {
                         try {
-                            myTTS.speak(str, TextToSpeech.QUEUE_ADD, myHash);
+                            if(inputNumber == 0){
+                                //"didn't catch that, try again"
+                            }
+                            else if(inputNumber == 1){
+                                //"Message from..."
+                            }
+                            else if(inputNumber == 2){
+                                //"Say your reply"
+                            }
+                            else if(inputNumber == 3){
+                                //-speechinput-, "would you like to..."
+                            }
+                            else {
+                                myTTS.speak(str, TextToSpeech.QUEUE_ADD, myHash);
+                            }
                         } catch (Exception e) {
                             //Toast.makeText(MainActivity.this, R.string.TTSNotReady,Toast.LENGTH_LONG).show();
                         }
@@ -331,7 +340,7 @@ public class MainService extends Service implements AudioManager.OnAudioFocusCha
         SmsManager sms = SmsManager.getDefault();
         sms.sendTextMessage(phonenumber, null, message, null, null);
 
-        TextReader("Sent Succesfully");
+        TextReader("Sent Succesfully", -1, null);
         inProcess = false;
     }
 }
