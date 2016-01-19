@@ -104,7 +104,10 @@ public class MainService extends Service implements AudioManager.OnAudioFocusCha
         public void onReceive(final Context context, final Intent intent) {
             if (intent.getAction().equals("android.provider.Telephony.SMS_RECEIVED") && tm.getCallState() == TelephonyManager.CALL_STATE_IDLE) {
                 Log.d(TAG, "SMS message received");
-                if(inProcess) return;
+                if(inProcess){
+                    Log.d(TAG, "Already in process");
+                    return;
+                }
                 while(inProcess){
                     //wait
                 }
@@ -240,8 +243,9 @@ public class MainService extends Service implements AudioManager.OnAudioFocusCha
                             await();
                         }
                         else {
+                            if(str.equals("")) return;
                             myTTS.speak(str, TextToSpeech.QUEUE_ADD, myHash);
-                            Log.d(TAG, "SyncSpeak awaiting. " + str);
+                            Log.d(TAG, "SyncSpeak awaiting, ambiguous message. " + str);
                             await();
                         }
                     } catch (Exception e) {
@@ -451,9 +455,15 @@ public class MainService extends Service implements AudioManager.OnAudioFocusCha
     private void onSpeechError(int error){
         Log.d(TAG, "onSpeechError " + error);
         sr.cancel();
-        ss.textReader("", 0, new String[] {});
-        Log.d(TAG, "onSpeechError startVoiceRecognition");
-        startVoiceRecognition();
+        if(error == 7) {
+            Log.d(TAG, "onSpeechError startVoiceRecognition");
+            startVoiceRecognition();
+        }
+        else {
+            ss.textReader("", 0, new String[] {});
+            Log.d(TAG, "onSpeechError startVoiceRecognition");
+            startVoiceRecognition();
+        }
         return;
     }
 
