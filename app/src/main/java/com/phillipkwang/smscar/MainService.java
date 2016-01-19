@@ -11,6 +11,7 @@ import android.content.IntentFilter;
 import android.database.Cursor;
 import android.media.AudioManager;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.CountDownTimer;
 import android.os.IBinder;
@@ -21,6 +22,7 @@ import android.speech.RecognizerIntent;
 import android.speech.SpeechRecognizer;
 import android.speech.tts.TextToSpeech;
 import android.speech.tts.UtteranceProgressListener;
+import android.speech.tts.Voice;
 import android.telephony.SmsManager;
 import android.telephony.SmsMessage;
 import android.telephony.TelephonyManager;
@@ -32,6 +34,7 @@ import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.Set;
 
 /**
  * Created by Phillip on 1/11/2016.
@@ -108,37 +111,35 @@ public class MainService extends Service implements AudioManager.OnAudioFocusCha
                     Log.d(TAG, "Already in process");
                     return;
                 }
-                while(inProcess){
-                    //wait
-                }
-                inProcess = true;
-                Bundle bundle = intent.getExtras();
-                if (bundle != null) {
-                    Object[] pdusObj = (Object[]) bundle.get("pdus");
-                    SmsMessage[] messages = new SmsMessage[pdusObj.length];
-                    String strMessage = "";
-                    messageincoming = "";
-                    for (int i = 0; i < messages.length; i++) {
-                        messages[i] = SmsMessage.createFromPdu((byte[]) pdusObj[i]);
-                        strMessage += "SMS From: " + messages[i].getOriginatingAddress();
+                else {
+                    inProcess = true;
+                    Bundle bundle = intent.getExtras();
+                    if (bundle != null) {
+                        Object[] pdusObj = (Object[]) bundle.get("pdus");
+                        SmsMessage[] messages = new SmsMessage[pdusObj.length];
+                        String strMessage = "";
+                        messageincoming = "";
+                        for (int i = 0; i < messages.length; i++) {
+                            messages[i] = SmsMessage.createFromPdu((byte[]) pdusObj[i]);
+                            strMessage += "SMS From: " + messages[i].getOriginatingAddress();
 //                      message += "From: " + messages[i].getOriginatingAddress();
-                        strMessage += " : ";
-                        strMessage += messages[i].getMessageBody();
-                        messageincoming += messages[i].getMessageBody();
-                        strMessage += "\n";
-                        phonenumber = messages[i].getOriginatingAddress();
-                        Log.v(TAG, messages[i].getOriginatingAddress() + " " + messages[i].getMessageBody());
+                            strMessage += " : ";
+                            strMessage += messages[i].getMessageBody();
+                            messageincoming += messages[i].getMessageBody();
+                            strMessage += "\n";
+                            phonenumber = messages[i].getOriginatingAddress();
+                            Log.v(TAG, messages[i].getOriginatingAddress() + " " + messages[i].getMessageBody());
+                        }
+                        messageincoming = messageincoming.trim();
+
+                        contactName = getContactDisplayNameByNumber(phonenumber);
+                        stateID = 1;
+                        ss.textReader("", 1, new String[]{contactName, messageincoming});
+                        Log.d(TAG, "SMSReceiver startVoiceRecognition");
+                        startVoiceRecognition();
+                        return;
                     }
-                    messageincoming = messageincoming.trim();
-
-                    contactName = getContactDisplayNameByNumber(phonenumber);
-                    stateID = 1;
-                    ss.textReader("", 1, new String[] {contactName, messageincoming});
-                    Log.d(TAG, "SMSReceiver startVoiceRecognition");
-                    startVoiceRecognition();
-                    return;
                 }
-
             }
         }
 
@@ -503,7 +504,7 @@ public class MainService extends Service implements AudioManager.OnAudioFocusCha
         SmsManager sms = SmsManager.getDefault();
         sms.sendTextMessage(phonenumber, null, message, null, null);
 
-        ss.textReader("Sent Succesfully", -5, new String[] {});
+        ss.textReader("Sent Successfully", -5, new String[] {});
         clearFields();
     }
 
