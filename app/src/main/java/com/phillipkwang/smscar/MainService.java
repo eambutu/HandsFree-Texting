@@ -58,7 +58,8 @@ public class MainService extends Service implements AudioManager.OnAudioFocusCha
     private AudioManager am;
     private TelephonyManager tm;
     private SpeechRecognizer sr;
-    private SessionTracker st;
+    private SyncSpeak ss;
+    private Intent ri;
 
     @Override
     public IBinder onBind(Intent arg0) {
@@ -68,7 +69,7 @@ public class MainService extends Service implements AudioManager.OnAudioFocusCha
 
     @Override
     public void onAudioFocusChange(int input) {
-
+        Log.d(TAG, "onAudioFocusChange code: " + input);
     }
 
     @Override
@@ -85,10 +86,14 @@ public class MainService extends Service implements AudioManager.OnAudioFocusCha
         myTTS.setSpeechRate((float)1);
         myTTS.setPitch((float)1);
 
+        ss = new SyncSpeak();
+
         sr = SpeechRecognizer.createSpeechRecognizer(this);
         sr.setRecognitionListener(new SpeechListener());
 
-        st = new SessionTracker("", 1);
+        ri = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
+        ri.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, "en-US");
+        ri.putExtra(RecognizerIntent.EXTRA_MAX_RESULTS,1);
 
         myApplication.registerReceiver(SMScatcher, new IntentFilter("android.provider.Telephony.SMS_RECEIVED"));
     }
@@ -99,6 +104,7 @@ public class MainService extends Service implements AudioManager.OnAudioFocusCha
         public void onReceive(final Context context, final Intent intent) {
             if (intent.getAction().equals("android.provider.Telephony.SMS_RECEIVED") && tm.getCallState() == TelephonyManager.CALL_STATE_IDLE) {
                 Log.d(TAG, "SMS message received");
+                if(inProcess) return;
                 while(inProcess){
                     //wait
                 }
@@ -124,7 +130,7 @@ public class MainService extends Service implements AudioManager.OnAudioFocusCha
 
                     contactName = getContactDisplayNameByNumber(phonenumber);
                     stateID = 1;
-                    TextReader("", 1, new String[] {contactName, messageincoming});
+                    ss.textReader("", 1, new String[] {contactName, messageincoming});
                     Log.d(TAG, "SMSReceiver startVoiceRecognition");
                     startVoiceRecognition();
                     return;
@@ -135,106 +141,127 @@ public class MainService extends Service implements AudioManager.OnAudioFocusCha
 
     };
 
-    public void waitForTTS() {
-        Log.d(TAG, "Started Waiting For TTS");
-        boolean speakingDone;
-        do{
-            speakingDone = myTTS.isSpeaking();
-        } while (speakingDone);
-        Log.d(TAG, "Done Waiting for TTS");
-        return;
-    }
+    class SyncSpeak {
+        private final Object lock = new Object();
 
-    public void TextReader(String rawinput, final int caseNumber, String[] params) {
-        if (myTTSReady) {
-            final HashMap myHash = new HashMap<String, String>();
-            myHash.put(TextToSpeech.Engine.KEY_PARAM_UTTERANCE_ID, "SMSCar");
-
-            if(rawinput == null){
-                //Toast.makeText(application, "No input", Toast.LENGTH_LONG).show();
-                return;
+        public void signal() {
+            Log.d(TAG, "SyncSpeak signalled");
+            synchronized (lock) {
+                lock.notify();
             }
-            String input = rawinput.replaceAll("http.*? ", ", URL, ");;
+        }
 
-            // trim off very long strings
-            if (input.length() > MAX_MESSAGE_LENGTH){
-                input = input.substring(0, MAX_MESSAGE_LENGTH);
-                input += " , , , message truncated";
+        public void await() throws InterruptedException {
+            synchronized (lock) {
+                lock.wait();
             }
+        }
 
-            //assume incallstream for now
-            if (am.isBluetoothScoAvailableOffCall()) {
-                am.startBluetoothSco();
-                am.setBluetoothScoOn(true);
-            }
+        public void textReader(String rawinput, final int caseNumber, String[] params) {
+            if (myTTSReady) {
+                Log.d(TAG, "Started textReader");
+                final HashMap myHash = new HashMap<String, String>();
+                myHash.put(TextToSpeech.Engine.KEY_PARAM_UTTERANCE_ID, "SMSCar");
 
-            am.requestAudioFocus(new MainService(), AudioManager.STREAM_VOICE_CALL, AudioManager.AUDIOFOCUS_GAIN);
-            myHash.put(TextToSpeech.Engine.KEY_PARAM_STREAM, String.valueOf(AudioManager.STREAM_VOICE_CALL));
+                if(rawinput == null){
+                    //Toast.makeText(application, "No input", Toast.LENGTH_LONG).show();
+                    return;
+                }
+                String input = rawinput.replaceAll("http.*? ", ", URL, ");;
 
-            originalVolume = am.getStreamVolume(AudioManager.STREAM_VOICE_CALL);
-            am.setStreamVolume(AudioManager.STREAM_VOICE_CALL, am.getStreamMaxVolume(AudioManager.STREAM_VOICE_CALL), 0);
+                // trim off very long strings
+                if (input.length() > MAX_MESSAGE_LENGTH){
+                    input = input.substring(0, MAX_MESSAGE_LENGTH);
+                    input += " , , , message truncated";
+                }
 
-            final String str = input;
-            final int inputNumber = caseNumber;
-            final String[] parameters = Arrays.copyOf(params, 2);
-            if (tm.getCallState() == TelephonyManager.CALL_STATE_IDLE) {
-                new CountDownTimer(SMS_delay, SMS_delay / 2) {
-                    @Override
-                    public void onFinish() {
-                        try {
-                            if(inputNumber == -1){
-                                myTTS.speak("Not a recognized command. Try again.", TextToSpeech.QUEUE_ADD, myHash);
-                            }
-                            if(inputNumber == 0){
-                                //"didn't catch that, try again"
-                                myTTS.speak("No speech detected. Please try again", TextToSpeech.QUEUE_ADD, myHash);
-                            }
-                            else if(inputNumber == 1){
-                                //"Message from..."
-                                String contactName = parameters[0];
-                                String message = parameters[1];
-                                myTTS.speak("Message from", TextToSpeech.QUEUE_ADD, myHash);
-                                myTTS.speak(contactName, TextToSpeech.QUEUE_ADD, myHash);
-                                myTTS.playSilence(250, TextToSpeech.QUEUE_ADD, myHash);
-                                myTTS.speak(message, TextToSpeech.QUEUE_ADD, myHash);
-                                myTTS.playSilence(100, TextToSpeech.QUEUE_ADD, myHash);
-                                myTTS.speak("Would you like to Reply, Repeat, or Quit?", TextToSpeech.QUEUE_ADD, myHash);
-                            }
-                            else if(inputNumber == 2){
-                                //"Say your reply"
-                                myTTS.speak("Say your reply", TextToSpeech.QUEUE_ADD, myHash);
-                            }
-                            else if(inputNumber == 3){
-                                //-speechinput-, "would you like to..."
-                                String speechInput = parameters[0];
-                                myTTS.speak(speechInput, TextToSpeech.QUEUE_ADD, myHash);
-                                myTTS.playSilence(250, TextToSpeech.QUEUE_ADD, myHash);
-                                myTTS.speak("Would you like to send, try again, or quit?", TextToSpeech.QUEUE_ADD, myHash);
-                            }
-                            else {
-                                myTTS.speak(str, TextToSpeech.QUEUE_ADD, myHash);
-                            }
-                        } catch (Exception e) {
-                            //Toast.makeText(MainActivity.this, R.string.TTSNotReady,Toast.LENGTH_LONG).show();
+                //assume incallstream for now
+                if (am.isBluetoothScoAvailableOffCall()) {
+                    am.startBluetoothSco();
+                    am.setBluetoothScoOn(true);
+                }
+
+                am.requestAudioFocus(MainService.this, AudioManager.STREAM_VOICE_CALL, AudioManager.AUDIOFOCUS_GAIN_TRANSIENT);
+                myHash.put(TextToSpeech.Engine.KEY_PARAM_STREAM, String.valueOf(AudioManager.STREAM_VOICE_CALL));
+
+                originalVolume = am.getStreamVolume(AudioManager.STREAM_VOICE_CALL);
+                am.setStreamVolume(AudioManager.STREAM_VOICE_CALL, am.getStreamMaxVolume(AudioManager.STREAM_VOICE_CALL), 0);
+
+                final String str = input;
+                final int inputNumber = caseNumber;
+                final String[] parameters = Arrays.copyOf(params, 2);
+                if (tm.getCallState() == TelephonyManager.CALL_STATE_IDLE) {
+                    try {
+                        if(inputNumber == -1){
+                            myTTS.speak("Not a recognized command. Try again.", TextToSpeech.QUEUE_ADD, myHash);
+                            Log.d(TAG, "SyncSpeak awaiting. Not a recognized command. Try again.");
+                            await();
                         }
+                        if(inputNumber == 0){
+                            //"didn't catch that, try again"
+                            myTTS.speak("No speech detected. Please try again", TextToSpeech.QUEUE_ADD, myHash);
+                            Log.d(TAG, "SyncSpeak awaiting. No speech detected. Please try again");
+                            await();
+                        }
+                        else if(inputNumber == 1){
+                            //"Message from..."
+                            String contactName = parameters[0];
+                            String message = parameters[1];
+                            Log.d(TAG, "SyncSpeak awaiting. Message from...");
+                            myTTS.speak("Message from", TextToSpeech.QUEUE_ADD, myHash);
+                            await();
+                            myTTS.speak(contactName, TextToSpeech.QUEUE_ADD, myHash);
+                            await();
+                            myTTS.playSilence(250, TextToSpeech.QUEUE_ADD, myHash);
+                            await();
+                            myTTS.speak(message, TextToSpeech.QUEUE_ADD, myHash);
+                            await();
+                            myTTS.playSilence(100, TextToSpeech.QUEUE_ADD, myHash);
+                            await();
+                            myTTS.speak("Would you like to Reply, Repeat, or Quit?", TextToSpeech.QUEUE_ADD, myHash);
+                            Log.d(TAG, "SyncSpeak awaiting. Would you like to...");
+                            await();
+                        }
+                        else if(inputNumber == 2){
+                            //"Say your reply"
+                            myTTS.speak("Say your reply", TextToSpeech.QUEUE_ADD, myHash);
+                            Log.d(TAG, "SyncSpeak awaiting. Say your reply.");
+                            await();
+                        }
+                        else if(inputNumber == 3){
+                            //-speechinput-, "would you like to..."
+                            String speechInput = parameters[0];
+                            myTTS.speak(speechInput, TextToSpeech.QUEUE_ADD, myHash);
+                            await();
+                            myTTS.playSilence(250, TextToSpeech.QUEUE_ADD, myHash);
+                            await();
+                            myTTS.speak("Would you like to send, try again, or quit?", TextToSpeech.QUEUE_ADD, myHash);
+                            Log.d(TAG, "SyncSpeak awaiting. Would you like to send, try again...");
+                            await();
+                        }
+                        else {
+                            myTTS.speak(str, TextToSpeech.QUEUE_ADD, myHash);
+                            Log.d(TAG, "SyncSpeak awaiting. " + str);
+                            await();
+                        }
+                    } catch (Exception e) {
+                        //Toast.makeText(MainActivity.this, R.string.TTSNotReady,Toast.LENGTH_LONG).show();
                     }
-
-                    @Override
-                    public void onTick(long arg0) {
-
-                    }
-                }.start();
+                }
+                Log.d(TAG, "textReader finished");
             }
-            waitForTTS();
         }
     }
 
     public void startVoiceRecognition(){
         Log.d(TAG, "Voice Recognition Started");
-        Intent speechintent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
-        speechintent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, "en-US");
-        speechintent.putExtra(RecognizerIntent.EXTRA_MAX_RESULTS,1);
-        sr.startListening(speechintent);
+        if (!sr.isRecognitionAvailable(this)) {
+            Log.d(TAG, "Voice Recognition Not Available");
+            ss.textReader("Voice recognition not available", -5, new String[] {});
+        }
+        else {
+            sr.startListening(ri);
+        }
     }
 
     public TextToSpeech.OnInitListener listenerStarted = new TextToSpeech.OnInitListener() {
@@ -269,6 +296,8 @@ public class MainService extends Service implements AudioManager.OnAudioFocusCha
             am.stopBluetoothSco();
             am.setBluetoothScoOn(false);
             am.setMode(AudioManager.MODE_NORMAL);
+
+            ss.signal();
         }
 
         @Override
@@ -343,7 +372,7 @@ public class MainService extends Service implements AudioManager.OnAudioFocusCha
                     onQuit();
                 }
                 else {
-                    onUnrecognized();
+                    onUnrecognized(speechResults[0]);
                 }
             }
             else if(stateID == 2){
@@ -360,7 +389,7 @@ public class MainService extends Service implements AudioManager.OnAudioFocusCha
                     onQuit();
                 }
                 else {
-                    onUnrecognized();
+                    onUnrecognized(speechResults[0]);
                 }
             }
             else {
@@ -373,9 +402,9 @@ public class MainService extends Service implements AudioManager.OnAudioFocusCha
         }
     }
 
-    private void onUnrecognized() {
-        Log.d(TAG, "onUnrecongized");
-        TextReader("", -1, new String[] {});
+    private void onUnrecognized(String result) {
+        Log.d(TAG, "onUnrecognized " + result);
+        ss.textReader("", -1, new String[] {});
         Log.d(TAG, "onUnrecongized startVoiceRecognition");
         startVoiceRecognition();
         return;
@@ -384,8 +413,7 @@ public class MainService extends Service implements AudioManager.OnAudioFocusCha
     private void onReply(){
         Log.d(TAG, "onReply");
         stateID = 2;
-        TextReader("", 2, new String[] {});
-        waitForTTS();
+        ss.textReader("", 2, new String[] {});
         Log.d(TAG, "onReply startVoiceRecognition");
         startVoiceRecognition();
         return;
@@ -393,7 +421,7 @@ public class MainService extends Service implements AudioManager.OnAudioFocusCha
 
     private void onRepeat(){
         Log.d(TAG, "onRepeat");
-        TextReader("", 1, new String[]{contactName, messageincoming});
+        ss.textReader("", 1, new String[]{contactName, messageincoming});
         Log.d(TAG, "onRepeat startVoiceRecognition");
         startVoiceRecognition();
         return;
@@ -408,7 +436,7 @@ public class MainService extends Service implements AudioManager.OnAudioFocusCha
     private void onTryAgain(){
         Log.d(TAG, "onTryAgain");
         stateID = 2;
-        TextReader("", 2, new String[] {});
+        ss.textReader("", 2, new String[] {});
         Log.d(TAG, "onTryAgain startVoiceRecognition");
         startVoiceRecognition();
         return;
@@ -422,17 +450,18 @@ public class MainService extends Service implements AudioManager.OnAudioFocusCha
 
     private void onSpeechError(int error){
         Log.d(TAG, "onSpeechError " + error);
-        TextReader("", 0, new String[] {});
+        sr.cancel();
+        ss.textReader("", 0, new String[] {});
         Log.d(TAG, "onSpeechError startVoiceRecognition");
         startVoiceRecognition();
         return;
     }
 
     private void onSpeechResult(String result){
-        Log.d(TAG, "onSpeechResult");
+        Log.d(TAG, "onSpeechResult " + result);
         stateID = 3;
         messageresponse = result;
-        TextReader("", 3, new String[]{result});
+        ss.textReader("", 3, new String[]{result});
         Log.d(TAG, "onSpeechResult startVoiceRecognition");
         startVoiceRecognition();
         return;
@@ -464,7 +493,7 @@ public class MainService extends Service implements AudioManager.OnAudioFocusCha
         SmsManager sms = SmsManager.getDefault();
         sms.sendTextMessage(phonenumber, null, message, null, null);
 
-        TextReader("Sent Succesfully", -5, new String[] {});
+        ss.textReader("Sent Succesfully", -5, new String[] {});
         clearFields();
     }
 
