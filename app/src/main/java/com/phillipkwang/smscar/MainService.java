@@ -52,6 +52,7 @@ public class MainService extends Service implements AudioManager.OnAudioFocusCha
     private static boolean inProcess = false;
     private static String phonenumber = "";
     private static int stateID = 0;
+    private static int audiostate = 0;
     private static String messageresponse = "";
     private static String messageincoming = "";
     private static String contactName = "";
@@ -73,6 +74,8 @@ public class MainService extends Service implements AudioManager.OnAudioFocusCha
     @Override
     public void onAudioFocusChange(int input) {
         Log.d(TAG, "onAudioFocusChange code: " + input);
+        audiostate = input;
+        ss.signal();
     }
 
     @Override
@@ -131,16 +134,25 @@ public class MainService extends Service implements AudioManager.OnAudioFocusCha
                             Log.v(TAG, messages[i].getOriginatingAddress() + " " + messages[i].getMessageBody());
                         }
                         messageincoming = messageincoming.trim();
+                        contactName = getContactDisplayNameByNumber(phonenumber);
+                        stateID = 1;
 
                         am.startBluetoothSco();
                         am.setBluetoothScoOn(true);
 
+                        audiostate = 0;
                         originalVolume = am.getStreamVolume(AudioManager.STREAM_VOICE_CALL);
                         am.setStreamVolume(AudioManager.STREAM_VOICE_CALL, am.getStreamMaxVolume(AudioManager.STREAM_VOICE_CALL), 0);
                         am.requestAudioFocus(MainService.this, AudioManager.STREAM_VOICE_CALL, AudioManager.AUDIOFOCUS_GAIN_TRANSIENT);
 
-                        contactName = getContactDisplayNameByNumber(phonenumber);
-                        stateID = 1;
+                        //wait for audiomanager to finish
+                        try {
+                            if(audiostate == 0) {
+                                ss.await();
+                            }
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
                         ss.textReader("", 1, new String[]{contactName, messageincoming});
                         Log.d(TAG, "SMSReceiver startVoiceRecognition");
                         startVoiceRecognition();
@@ -163,6 +175,7 @@ public class MainService extends Service implements AudioManager.OnAudioFocusCha
         }
 
         public void await() throws InterruptedException {
+            Log.d(TAG, "SyncSpeak awaited");
             synchronized (lock) {
                 lock.wait();
             }
