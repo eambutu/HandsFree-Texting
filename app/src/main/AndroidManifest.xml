@@ -21,6 +21,11 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <activity
+            android:name=".HelpActivity"
+            android:label="Help"
+            android:parentActivityName=".MainActivity">
+        </activity>
         <service
             android:name=".MainService"
             android:enabled="true"

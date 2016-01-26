@@ -3,21 +3,24 @@ package com.phillipkwang.smscar;
 import android.app.ActivityManager;
 import android.content.Context;
 import android.content.Intent;
-import android.support.v7.app.ActionBarActivity;
 import android.os.Bundle;
+import android.support.v7.app.AppCompatActivity;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
 import android.widget.Toast;
+import android.support.v7.widget.Toolbar;
 
 
-public class MainActivity extends ActionBarActivity {
+public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        Toolbar myToolbar = (Toolbar) findViewById(R.id.my_toolbar);
+        setSupportActionBar(myToolbar);
 
         Button startButton = (Button)findViewById(R.id.start);
         startButton.setOnClickListener(new View.OnClickListener(){
@@ -76,6 +79,12 @@ public class MainActivity extends ActionBarActivity {
 
         //noinspection SimplifiableIfStatement
         if (id == R.id.action_settings) {
+            return true;
+        }
+
+        else if (id == R.id.action_help) {
+            Intent i = new Intent(MainActivity.this, HelpActivity.class);
+            startActivity(i);
             return true;
         }
 

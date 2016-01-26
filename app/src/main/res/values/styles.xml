@@ -1,8 +1,19 @@
 <resources>
 
     <!-- Base application theme. -->
-    <style name="AppTheme" parent="Theme.AppCompat.Light.DarkActionBar">
+    <style name="AppTheme" parent="Theme.AppCompat.Light.NoActionBar">
         <!-- Customize your theme here. -->
+    </style>
+
+    <style name="MyActionBar" parent="Theme.AppCompat.NoActionBar">
+        <!--color of title text in Theme.AppCompat-->
+        <item name="android:textColorPrimary">#ffffff</item>
+        <!--color of title text in Theme.AppCompat.Light-->
+        <item name="android:textColorPrimaryInverse">#000000</item>
+        <!--color of the text of menu items-->
+        <item name="android:actionMenuTextColor">#ffffff</item>
+        <!--color of the overflow icon-->
+        <item name="android:textColorSecondary">#ffffff</item>
     </style>
 
 </resources>

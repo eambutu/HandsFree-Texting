@@ -132,6 +132,13 @@ public class MainService extends Service implements AudioManager.OnAudioFocusCha
                         }
                         messageincoming = messageincoming.trim();
 
+                        am.startBluetoothSco();
+                        am.setBluetoothScoOn(true);
+
+                        originalVolume = am.getStreamVolume(AudioManager.STREAM_VOICE_CALL);
+                        am.setStreamVolume(AudioManager.STREAM_VOICE_CALL, am.getStreamMaxVolume(AudioManager.STREAM_VOICE_CALL), 0);
+                        am.requestAudioFocus(MainService.this, AudioManager.STREAM_VOICE_CALL, AudioManager.AUDIOFOCUS_GAIN_TRANSIENT);
+
                         contactName = getContactDisplayNameByNumber(phonenumber);
                         stateID = 1;
                         ss.textReader("", 1, new String[]{contactName, messageincoming});
@@ -180,16 +187,12 @@ public class MainService extends Service implements AudioManager.OnAudioFocusCha
                 }
 
                 //assume incallstream for now
-                if (am.isBluetoothScoAvailableOffCall()) {
+                /*if (am.isBluetoothScoAvailableOffCall()) {
                     am.startBluetoothSco();
                     am.setBluetoothScoOn(true);
-                }
+                }*/
 
-                am.requestAudioFocus(MainService.this, AudioManager.STREAM_VOICE_CALL, AudioManager.AUDIOFOCUS_GAIN_TRANSIENT);
                 myHash.put(TextToSpeech.Engine.KEY_PARAM_STREAM, String.valueOf(AudioManager.STREAM_VOICE_CALL));
-
-                originalVolume = am.getStreamVolume(AudioManager.STREAM_VOICE_CALL);
-                am.setStreamVolume(AudioManager.STREAM_VOICE_CALL, am.getStreamMaxVolume(AudioManager.STREAM_VOICE_CALL), 0);
 
                 final String str = input;
                 final int inputNumber = caseNumber;
@@ -295,13 +298,6 @@ public class MainService extends Service implements AudioManager.OnAudioFocusCha
                 myApplication.sendBroadcast(c);
             }
 
-            //am.setStreamVolume(AudioManager.STREAM_VOICE_CALL, originalVolume, 0);
-            am.abandonAudioFocus(MainService.this);
-
-            am.stopBluetoothSco();
-            am.setBluetoothScoOn(false);
-            am.setMode(AudioManager.MODE_NORMAL);
-
             ss.signal();
         }
 
@@ -347,15 +343,9 @@ public class MainService extends Service implements AudioManager.OnAudioFocusCha
 
         public void onReadyForSpeech(Bundle params) {
             Log.d(TAG, "onReadyForSpeech");
-            am.startBluetoothSco();
-            am.setBluetoothScoOn(true);
         }
 
         public void onResults(Bundle results) {
-            am.stopBluetoothSco();
-            am.setBluetoothScoOn(false);
-            am.setMode(AudioManager.MODE_NORMAL);
-
             String str = "";
             Log.d(TAG, "onResults " + results);
             ArrayList<String> data = results.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
@@ -515,6 +505,13 @@ public class MainService extends Service implements AudioManager.OnAudioFocusCha
         messageresponse = "";
         messageincoming = "";
         contactName = "";
+
+        //am.setStreamVolume(AudioManager.STREAM_VOICE_CALL, originalVolume, 0);
+        am.abandonAudioFocus(MainService.this);
+
+        am.stopBluetoothSco();
+        am.setBluetoothScoOn(false);
+        am.setMode(AudioManager.MODE_NORMAL);
     }
 
     private boolean existsInArray(String query, String[] array){
