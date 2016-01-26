@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+    <PreferenceCategory
+        android:title="General"
+        android:key="pref_key_general_settings">
+        <CheckBoxPreference
+            android:key="pref_key_notification_preference"
+            android:title="Notifications Icon?"
+            android:summary="Show icon when service is running"
+            android:defaultValue="true"/> <!--still need android:entryValues, and android:defaultValue-->
+        <CheckBoxPreference
+            android:key="pref_key_servicestart_preference"
+            android:title="On Bootup?"
+            android:summary="Start service on bootup"
+            android:defaultValue="false"/> <!--still need android:entryValues-->
+        <CheckBoxPreference
+            android:key="pref_key_readtexts_preference"
+            android:title="Always Read Texts?"
+            android:summary="Opposed to, only when connected to Bluetooth"
+            android:defaultValue="false"/> <!--still need android:entryValues-->
+    </PreferenceCategory>
+</PreferenceScreen>

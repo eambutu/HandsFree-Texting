@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="NotificationsOnOptions">
+        <item>Yes</item>
+        <item>No</item>
+    </string-array>
+    <string-array name="NotificationsOnValues">
+        <item>yes</item>
+        <item>no</item>
+    </string-array>
+    <string-array name="StartServiceOptions">
+        <item>On Boot-up and Button Press</item>
+        <item>Only On Button Press</item>
+    </string-array>
+    <string-array name="StartServiceValues">
+        <item>bootup</item>
+        <item>button</item>
+    </string-array>
+    <string-array name="ReadTextsOptions">
+        <item>Whenever Service On</item>
+        <item>When Paired With Bluetooth</item>
+    </string-array>
+    <string-array name="ReadTextsValues">
+        <item>service</item>
+        <item>bluetooth</item>
+    </string-array>
+</resources>
