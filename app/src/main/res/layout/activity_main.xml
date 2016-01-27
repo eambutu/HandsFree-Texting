@@ -16,29 +16,24 @@
         android:theme="@style/MyActionBar"
         app:popupTheme="@style/MyActionBar"/>
 
-    <Button android:id="@+id/start"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Start Service"
-        android:layout_below="@+id/my_toolbar"
-        android:layout_gravity="center_vertical"
-        android:layout_alignParentLeft="true"/>
+    <Button
+        android:layout_width="300dp"
+        android:layout_height="300dp"
+        android:id="@+id/button"
+        android:layout_centerVertical="true"
+        android:layout_centerHorizontal="true"
+        android:background="@drawable/start_button"/>
 
-    <Button android:id="@+id/stop"
+    <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Stop Service"
-        android:layout_below="@+id/start"
-        android:layout_gravity="center_vertical"
-        android:layout_alignParentLeft="true" />
-
-    <Button android:id="@+id/running"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Is Service Running?"
-        android:layout_below="@+id/stop"
-        android:layout_gravity="center_vertical"
-        android:layout_alignParentLeft="true"/>
+        android:textAppearance="?android:attr/textAppearanceMedium"
+        android:text=""
+        android:textColor="#000000"
+        android:id="@+id/serviceStatus"
+        android:layout_alignParentBottom="true"
+        android:layout_centerHorizontal="true"
+        android:layout_marginBottom="110dp" />
 
 </RelativeLayout>
 

@@ -8,6 +8,7 @@ import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.media.AudioManager;
 import android.net.Uri;
@@ -44,6 +45,7 @@ public class MainService extends Service implements AudioManager.OnAudioFocusCha
     private final int MY_DATA_CHECK_CODE = 0;
     private final int REQ_CODE_SPEECH_INPUT = 100;
     private long SMS_delay = 200;
+    public static final String PREFS_NAME = "SMSCar_Prefs";
     private int MAX_MESSAGE_LENGTH = 350;
     private int originalVolume;
 
@@ -56,6 +58,11 @@ public class MainService extends Service implements AudioManager.OnAudioFocusCha
     private static String messageresponse = "";
     private static String messageincoming = "";
     private static String contactName = "";
+
+    private static SharedPreferences preferences;
+    private static boolean notification;
+    private static boolean servicestart;
+    private static boolean readtexts;
 
     private static Application myApplication;
     private TextToSpeech myTTS;
@@ -87,6 +94,13 @@ public class MainService extends Service implements AudioManager.OnAudioFocusCha
     @Override
     public void onCreate() {
         myApplication = this.getApplication();
+
+        preferences = getSharedPreferences(PREFS_NAME, 0);
+        notification = preferences.getBoolean("pref_key_notification_preference", true);
+        servicestart = preferences.getBoolean("pref_key_startservice_preference", false);
+        readtexts = preferences.getBoolean("pref_key_readtexts_preference", false);
+        Log.d(TAG, "Preferences are, notif: " + notification + " start: " + servicestart + " readtexts: " + readtexts);
+
         am = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
         myTTS = new TextToSpeech(myApplication, listenerStarted);
         myTTS.setSpeechRate((float)1);

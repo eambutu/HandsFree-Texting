@@ -5,15 +5,20 @@ import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
-import android.widget.Toast;
 import android.support.v7.widget.Toolbar;
+import android.widget.TextView;
+import android.widget.Toast;
 
 
 public class MainActivity extends AppCompatActivity {
+    private static boolean serviceOn;
+    private static Button button;
+    private static TextView textServiceStatus;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -22,7 +27,30 @@ public class MainActivity extends AppCompatActivity {
         Toolbar myToolbar = (Toolbar) findViewById(R.id.my_toolbar);
         setSupportActionBar(myToolbar);
 
-        Button startButton = (Button)findViewById(R.id.start);
+        serviceOn = isMyServiceRunning(MainService.class);
+        Log.d("MainActivity", "first onCreate: serviceOn is " + serviceOn);
+        button = (Button)findViewById(R.id.button);
+        textServiceStatus = (TextView)findViewById(R.id.serviceStatus);
+
+        updateViews();
+
+        button.setOnClickListener(new View.OnClickListener(){
+            public void onClick(View v){
+                Log.d("MainActivity", " Button Pressed!!");
+                if(!serviceOn) {
+                    startMainService();
+                    Toast.makeText(MainActivity.this, R.string.start_service, Toast.LENGTH_SHORT).show();
+                }
+                else {
+                    stopMainService();
+                    Toast.makeText(MainActivity.this, R.string.stop_service, Toast.LENGTH_SHORT).show();
+                }
+                serviceOn = !serviceOn;
+                Log.d("MainActivity", "serviceOn is " + serviceOn);
+                updateViews();
+            }
+        });
+        /*Button startButton = (Button)findViewById(R.id.start);
         startButton.setOnClickListener(new View.OnClickListener(){
             public void onClick(View v){
                 startMainService();
@@ -42,7 +70,21 @@ public class MainActivity extends AppCompatActivity {
                 boolean isServiceRunning = isMyServiceRunning(MainService.class);
                 Toast.makeText(MainActivity.this, isServiceRunning + "", Toast.LENGTH_SHORT).show();
             }
-        });
+        });*/
+    }
+
+    @Override
+    public void onResume() {
+        Log.d("MainActivity", "onResume");
+        super.onResume();
+        updateViews();
+    }
+
+    @Override
+    public void onStart() {
+        Log.d("MainActivity", "onStart");
+        super.onStart();
+        updateViews();
     }
 
     private void startMainService(){
@@ -51,6 +93,17 @@ public class MainActivity extends AppCompatActivity {
 
     private void stopMainService(){
         stopService(new Intent(this, MainService.class));
+    }
+
+    private void updateViews(){
+        if(!serviceOn) {
+            button.setBackgroundResource(R.drawable.start_button);
+            textServiceStatus.setText("Service is Off");
+        }
+        else {
+            button.setBackgroundResource(R.drawable.stop_button);
+            textServiceStatus.setText("Service is On");
+        }
     }
 
     private boolean isMyServiceRunning(Class<?> serviceClass) {
