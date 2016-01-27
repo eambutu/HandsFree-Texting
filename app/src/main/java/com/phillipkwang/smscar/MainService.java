@@ -3,6 +3,9 @@ package com.phillipkwang.smscar;
 import android.annotation.TargetApi;
 import android.app.Application;
 import android.app.Service;
+import android.bluetooth.BluetoothDevice;
+import android.bluetooth.BluetoothManager;
+import android.bluetooth.BluetoothProfile;
 import android.content.BroadcastReceiver;
 import android.content.ContentResolver;
 import android.content.Context;
@@ -36,6 +39,7 @@ import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -72,6 +76,7 @@ public class MainService extends Service implements AudioManager.OnAudioFocusCha
     private SpeechRecognizer sr;
     private SyncSpeak ss;
     private Intent ri;
+    private BluetoothManager bm;
 
     @Override
     public IBinder onBind(Intent arg0) {
@@ -104,7 +109,7 @@ public class MainService extends Service implements AudioManager.OnAudioFocusCha
 
         am = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
         myTTS = new TextToSpeech(myApplication, listenerStarted);
-        myTTS.setSpeechRate((float)1);
+        myTTS.setSpeechRate((float) 1);
         myTTS.setPitch((float)1);
 
         ss = new SyncSpeak();
@@ -116,6 +121,8 @@ public class MainService extends Service implements AudioManager.OnAudioFocusCha
         ri.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, "en-US");
         ri.putExtra(RecognizerIntent.EXTRA_MAX_RESULTS,1);
 
+        bm = (BluetoothManager)getSystemService(Context.BLUETOOTH_SERVICE);
+
         myApplication.registerReceiver(SMScatcher, new IntentFilter("android.provider.Telephony.SMS_RECEIVED"));
     }
 
@@ -123,6 +130,13 @@ public class MainService extends Service implements AudioManager.OnAudioFocusCha
 
         @Override
         public void onReceive(final Context context, final Intent intent) {
+            if (!readtexts) {
+                List<BluetoothDevice> connectedDevices = bm.getConnectedDevices(BluetoothProfile.STATE_CONNECTED);
+                Log.d(TAG, "Number of Bluetooth connected devices: " + connectedDevices.size());
+                if(connectedDevices.size() == 0) {
+                    return;
+                }
+            }
             if (intent.getAction().equals("android.provider.Telephony.SMS_RECEIVED") && tm.getCallState() == TelephonyManager.CALL_STATE_IDLE) {
                 Log.d(TAG, "SMS message received");
                 if(inProcess){
