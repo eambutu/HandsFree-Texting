@@ -14,12 +14,6 @@ import android.util.Log;
 public class SettingsActivity extends PreferenceActivity {
     private static final String TAG = "PreferenceActivity";
     public static final String PREFS_NAME = "SMSCar_Prefs";
-    @Override
-    public void onContentChanged() {
-        Log.d(TAG, "onContentChanged");
-        stopService(new Intent(this, MainService.class));
-        super.onContentChanged();
-    }
 
     @Override
     public void onDestroy() {
@@ -27,7 +21,7 @@ public class SettingsActivity extends PreferenceActivity {
         SharedPreferences settings = getSharedPreferences(PREFS_NAME, 0);
         SharedPreferences.Editor editor = settings.edit();
         editor.commit();
-        startService(new Intent(this, MainService.class));
+
         super.onDestroy();
     }
 

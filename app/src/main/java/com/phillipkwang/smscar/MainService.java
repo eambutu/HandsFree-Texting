@@ -16,6 +16,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.CountDownTimer;
 import android.os.IBinder;
+import android.preference.PreferenceManager;
 import android.provider.BaseColumns;
 import android.provider.ContactsContract;
 import android.speech.RecognitionListener;
@@ -95,9 +96,9 @@ public class MainService extends Service implements AudioManager.OnAudioFocusCha
     public void onCreate() {
         myApplication = this.getApplication();
 
-        preferences = getSharedPreferences(PREFS_NAME, 0);
+        preferences = PreferenceManager.getDefaultSharedPreferences(this);
         notification = preferences.getBoolean("pref_key_notification_preference", true);
-        servicestart = preferences.getBoolean("pref_key_startservice_preference", false);
+        servicestart = preferences.getBoolean("pref_key_servicestart_preference", false);
         readtexts = preferences.getBoolean("pref_key_readtexts_preference", false);
         Log.d(TAG, "Preferences are, notif: " + notification + " start: " + servicestart + " readtexts: " + readtexts);
 
