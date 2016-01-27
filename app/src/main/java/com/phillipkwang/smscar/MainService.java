@@ -66,7 +66,6 @@ public class MainService extends Service implements AudioManager.OnAudioFocusCha
 
     private static SharedPreferences preferences;
     private static boolean notification;
-    private static boolean servicestart;
     private static boolean readtexts;
 
     private static Application myApplication;
@@ -103,9 +102,8 @@ public class MainService extends Service implements AudioManager.OnAudioFocusCha
 
         preferences = PreferenceManager.getDefaultSharedPreferences(this);
         notification = preferences.getBoolean("pref_key_notification_preference", true);
-        servicestart = preferences.getBoolean("pref_key_servicestart_preference", false);
         readtexts = preferences.getBoolean("pref_key_readtexts_preference", false);
-        Log.d(TAG, "Preferences are, notif: " + notification + " start: " + servicestart + " readtexts: " + readtexts);
+        Log.d(TAG, "Preferences are, notif: " + notification +  " readtexts: " + readtexts);
 
         am = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
         myTTS = new TextToSpeech(myApplication, listenerStarted);
