@@ -2,6 +2,9 @@ package com.phillipkwang.smscar;
 
 import android.annotation.TargetApi;
 import android.app.Application;
+import android.app.Notification;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.app.Service;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothManager;
@@ -28,6 +31,8 @@ import android.speech.SpeechRecognizer;
 import android.speech.tts.TextToSpeech;
 import android.speech.tts.UtteranceProgressListener;
 import android.speech.tts.Voice;
+import android.support.v4.app.NotificationCompat;
+import android.support.v4.app.TaskStackBuilder;
 import android.telephony.SmsManager;
 import android.telephony.SmsMessage;
 import android.telephony.TelephonyManager;
@@ -49,10 +54,10 @@ public class MainService extends Service implements AudioManager.OnAudioFocusCha
     private static final String TAG = "MainService";
     private final int MY_DATA_CHECK_CODE = 0;
     private final int REQ_CODE_SPEECH_INPUT = 100;
-    private long SMS_delay = 200;
+    private long SMS_delay = 2000;
     public static final String PREFS_NAME = "SMSCar_Prefs";
     private int MAX_MESSAGE_LENGTH = 350;
-    private int originalVolume;
+    private int[] originalVolume;
 
     private boolean myTTSReady = true; //false?
     private boolean clearedTTS = false;
@@ -76,6 +81,7 @@ public class MainService extends Service implements AudioManager.OnAudioFocusCha
     private SyncSpeak ss;
     private Intent ri;
     private BluetoothManager bm;
+    private NotificationManager nm;
 
     @Override
     public IBinder onBind(Intent arg0) {
@@ -86,8 +92,6 @@ public class MainService extends Service implements AudioManager.OnAudioFocusCha
     @Override
     public void onAudioFocusChange(int input) {
         Log.d(TAG, "onAudioFocusChange code: " + input);
-        audiostate = input;
-        ss.signal();
     }
 
     @Override
@@ -104,6 +108,19 @@ public class MainService extends Service implements AudioManager.OnAudioFocusCha
         notification = preferences.getBoolean("pref_key_notification_preference", true);
         readtexts = preferences.getBoolean("pref_key_readtexts_preference", false);
         Log.d(TAG, "Preferences are, notif: " + notification +  " readtexts: " + readtexts);
+
+        if(notification) {
+            nm = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+            Intent notificationIntent = new Intent(this, MainActivity.class);
+            PendingIntent contentIntent = PendingIntent.getActivity(this, 0, notificationIntent, 0);
+            Notification mNotification = new Notification.Builder(myApplication)
+                    .setSmallIcon(R.drawable.car_phone_green_1)
+                    .setContentIntent(contentIntent)
+                    .setContentTitle("HandsFree Texting")
+                    .setContentText("Service is currently on")
+                    .setPriority(Notification.PRIORITY_LOW).build();
+            nm.notify(1, mNotification);
+        }
 
         am = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
         myTTS = new TextToSpeech(myApplication, listenerStarted);
@@ -124,14 +141,30 @@ public class MainService extends Service implements AudioManager.OnAudioFocusCha
         myApplication.registerReceiver(SMScatcher, new IntentFilter("android.provider.Telephony.SMS_RECEIVED"));
     }
 
+    @Override
+    public void onDestroy() {
+        clearFields();
+        try {
+            myApplication.unregisterReceiver(SMScatcher);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        if (notification) {
+            nm.cancelAll();
+        }
+        super.onDestroy();
+    }
+
     private final BroadcastReceiver SMScatcher = new BroadcastReceiver() {
 
         @Override
         public void onReceive(final Context context, final Intent intent) {
             if (!readtexts) {
-                List<BluetoothDevice> connectedDevices = bm.getConnectedDevices(BluetoothProfile.STATE_CONNECTED);
-                Log.d(TAG, "Number of Bluetooth connected devices: " + connectedDevices.size());
-                if(connectedDevices.size() == 0) {
+                List<BluetoothDevice> connectedDevices1 = bm.getDevicesMatchingConnectionStates(BluetoothProfile.GATT, new int[] {BluetoothProfile.STATE_CONNECTED});
+                List<BluetoothDevice> connectedDevices2 = bm.getDevicesMatchingConnectionStates(BluetoothProfile.GATT_SERVER, new int[]{BluetoothProfile.STATE_CONNECTED});
+                int numconnected = connectedDevices1.size() + connectedDevices2.size();
+                Log.d(TAG, "Number of Bluetooth connected devices: " + numconnected);
+                if(numconnected == 0) {
                     return;
                 }
             }
@@ -168,21 +201,26 @@ public class MainService extends Service implements AudioManager.OnAudioFocusCha
                         am.setBluetoothScoOn(true);
 
                         audiostate = 0;
-                        originalVolume = am.getStreamVolume(AudioManager.STREAM_VOICE_CALL);
+                        originalVolume = new int[2];
+                        originalVolume[0] = am.getStreamVolume(AudioManager.STREAM_VOICE_CALL);
+                        originalVolume[1] = am.getStreamVolume(AudioManager.STREAM_MUSIC);
                         am.setStreamVolume(AudioManager.STREAM_VOICE_CALL, am.getStreamMaxVolume(AudioManager.STREAM_VOICE_CALL), 0);
+                        am.setStreamVolume(AudioManager.STREAM_MUSIC, am.getStreamMaxVolume(AudioManager.STREAM_MUSIC), 0);
                         am.requestAudioFocus(MainService.this, AudioManager.STREAM_VOICE_CALL, AudioManager.AUDIOFOCUS_GAIN_TRANSIENT);
 
-                        //wait for audiomanager to finish
-                        try {
-                            if(audiostate == 0) {
-                                ss.await();
+                        CountDownTimer connectTimer = new CountDownTimer(SMS_delay, SMS_delay/2) {
+                            @Override
+                            public void onTick(long millisUntilFinished) {}
+
+                            @Override
+                            public void onFinish() {
+                                ss.textReader("", 1, new String[]{contactName, messageincoming});
+                                Log.d(TAG, "SMSReceiver startVoiceRecognition");
+                                startVoiceRecognition();
+                                return;
                             }
-                        } catch (InterruptedException e) {
-                            e.printStackTrace();
-                        }
-                        ss.textReader("", 1, new String[]{contactName, messageincoming});
-                        Log.d(TAG, "SMSReceiver startVoiceRecognition");
-                        startVoiceRecognition();
+                        };
+                        connectTimer.start();
                         return;
                     }
                 }
@@ -414,11 +452,11 @@ public class MainService extends Service implements AudioManager.OnAudioFocusCha
                 onSpeechResult(speechResults[0]);
             }
             else if(stateID == 3){
-                if (existsInArray("send", speechResults)) {
-                    onSend();
-                }
-                else if(existsInArray("again", speechResults)) {
+                if (existsInArray("again", speechResults)) {
                     onTryAgain();
+                }
+                else if(existsInArray("end", speechResults)) {
+                    onSend();
                 }
                 else if(existsInArray("quit", speechResults)) {
                     onQuit();
@@ -513,7 +551,7 @@ public class MainService extends Service implements AudioManager.OnAudioFocusCha
         String name = "unknown number";
 
         ContentResolver contentResolver = getContentResolver();
-        Cursor contactLookup = contentResolver.query(uri, new String[] {BaseColumns._ID, ContactsContract.PhoneLookup.DISPLAY_NAME}, null, null, null);
+        Cursor contactLookup = contentResolver.query(uri, new String[]{BaseColumns._ID, ContactsContract.PhoneLookup.DISPLAY_NAME}, null, null, null);
 
         try {
             if (contactLookup != null && contactLookup.getCount() > 0) {
@@ -534,7 +572,7 @@ public class MainService extends Service implements AudioManager.OnAudioFocusCha
         SmsManager sms = SmsManager.getDefault();
         sms.sendTextMessage(phonenumber, null, message, null, null);
 
-        ss.textReader("Sent Successfully", -5, new String[] {});
+        ss.textReader("Sent Successfully", -5, new String[]{});
         clearFields();
     }
 
@@ -546,7 +584,10 @@ public class MainService extends Service implements AudioManager.OnAudioFocusCha
         messageincoming = "";
         contactName = "";
 
-        //am.setStreamVolume(AudioManager.STREAM_VOICE_CALL, originalVolume, 0);
+        if (originalVolume != null) {
+            am.setStreamVolume(AudioManager.STREAM_VOICE_CALL, originalVolume[0], 0);
+            am.setStreamVolume(AudioManager.STREAM_MUSIC, originalVolume[1], 0);
+        }
         am.abandonAudioFocus(MainService.this);
 
         am.stopBluetoothSco();

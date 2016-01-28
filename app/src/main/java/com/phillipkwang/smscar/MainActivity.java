@@ -1,6 +1,10 @@
 package com.phillipkwang.smscar;
 
 import android.app.ActivityManager;
+import android.bluetooth.BluetoothA2dp;
+import android.bluetooth.BluetoothDevice;
+import android.bluetooth.BluetoothManager;
+import android.bluetooth.BluetoothProfile;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
@@ -14,11 +18,14 @@ import android.support.v7.widget.Toolbar;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import java.util.List;
+
 
 public class MainActivity extends AppCompatActivity {
     private static boolean serviceOn;
     private static Button button;
     private static TextView textServiceStatus;
+    private static final String TAG = "MainActivity";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -28,7 +35,7 @@ public class MainActivity extends AppCompatActivity {
         setSupportActionBar(myToolbar);
 
         serviceOn = isMyServiceRunning(MainService.class);
-        Log.d("MainActivity", "first onCreate: serviceOn is " + serviceOn);
+        Log.d(TAG, "first onCreate: serviceOn is " + serviceOn);
         button = (Button)findViewById(R.id.button);
         textServiceStatus = (TextView)findViewById(R.id.serviceStatus);
 
@@ -36,7 +43,7 @@ public class MainActivity extends AppCompatActivity {
 
         button.setOnClickListener(new View.OnClickListener(){
             public void onClick(View v){
-                Log.d("MainActivity", " Button Pressed!!");
+                Log.d(TAG, " Button Pressed!!");
                 if(!serviceOn) {
                     startMainService();
                     Toast.makeText(MainActivity.this, R.string.start_service, Toast.LENGTH_SHORT).show();
@@ -46,43 +53,37 @@ public class MainActivity extends AppCompatActivity {
                     Toast.makeText(MainActivity.this, R.string.stop_service, Toast.LENGTH_SHORT).show();
                 }
                 serviceOn = !serviceOn;
-                Log.d("MainActivity", "serviceOn is " + serviceOn);
+                Log.d(TAG, "serviceOn is " + serviceOn);
                 updateViews();
             }
         });
-        /*Button startButton = (Button)findViewById(R.id.start);
-        startButton.setOnClickListener(new View.OnClickListener(){
+
+        /*Button testingButton = (Button)findViewById(R.id.button2);
+        testingButton.setOnClickListener(new View.OnClickListener(){
             public void onClick(View v){
-                startMainService();
-                Toast.makeText(MainActivity.this, R.string.start_service, Toast.LENGTH_SHORT).show();
-            }
-        });
-        Button stopButton = (Button)findViewById(R.id.stop);
-        stopButton.setOnClickListener(new View.OnClickListener(){
-            public void onClick(View v){
-                stopMainService();
-                Toast.makeText(MainActivity.this, R.string.stop_service, Toast.LENGTH_SHORT).show();
-            }
-        });
-        Button runningButton = (Button)findViewById(R.id.running);
-        runningButton.setOnClickListener(new View.OnClickListener(){
-            public void onClick(View v){
-                boolean isServiceRunning = isMyServiceRunning(MainService.class);
-                Toast.makeText(MainActivity.this, isServiceRunning + "", Toast.LENGTH_SHORT).show();
+                BluetoothManager bm = (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
+                int[] profiles = new int[] {7,8};
+                int numconnected = 0;
+                List<BluetoothDevice> connectedDevices = BluetoothA2dp.
+                for (int index = 0; index < profiles.length; index++) {
+                    List<BluetoothDevice> connectedDevices = bm.getConnectedDevices(profiles[index]);
+                    numconnected += connectedDevices.size();
+                }
+                Toast.makeText(MainActivity.this, "Number of connected: " + numconnected, Toast.LENGTH_SHORT).show();
             }
         });*/
     }
 
     @Override
     public void onResume() {
-        Log.d("MainActivity", "onResume");
+        Log.d(TAG, "onResume");
         super.onResume();
         updateViews();
     }
 
     @Override
     public void onStart() {
-        Log.d("MainActivity", "onStart");
+        Log.d(TAG, "onStart");
         super.onStart();
         updateViews();
     }

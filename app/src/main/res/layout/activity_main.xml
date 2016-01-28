@@ -35,5 +35,14 @@
         android:layout_centerHorizontal="true"
         android:layout_marginBottom="110dp" />
 
+    <!--<Button
+        style="?android:attr/buttonStyleSmall"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="testing connect"
+        android:id="@+id/button2"
+        android:layout_below="@+id/my_toolbar"
+        android:layout_alignParentStart="true" />-->
+
 </RelativeLayout>
 
