@@ -159,7 +159,7 @@ public class MainService extends Service implements AudioManager.OnAudioFocusCha
 
         @Override
         public void onReceive(final Context context, final Intent intent) {
-            if (!readtexts) {
+            /*if (!readtexts) {
                 List<BluetoothDevice> connectedDevices1 = bm.getDevicesMatchingConnectionStates(BluetoothProfile.GATT, new int[] {BluetoothProfile.STATE_CONNECTED});
                 List<BluetoothDevice> connectedDevices2 = bm.getDevicesMatchingConnectionStates(BluetoothProfile.GATT_SERVER, new int[]{BluetoothProfile.STATE_CONNECTED});
                 int numconnected = connectedDevices1.size() + connectedDevices2.size();
@@ -167,7 +167,7 @@ public class MainService extends Service implements AudioManager.OnAudioFocusCha
                 if(numconnected == 0) {
                     return;
                 }
-            }
+            }*/
             if (intent.getAction().equals("android.provider.Telephony.SMS_RECEIVED") && tm.getCallState() == TelephonyManager.CALL_STATE_IDLE) {
                 Log.d(TAG, "SMS message received");
                 if(inProcess){

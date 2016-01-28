@@ -20,7 +20,7 @@
         android:layout_height="wrap_content"
         android:textAppearance="?android:attr/textAppearanceMedium"
         android:textColor="#000000"
-        android:text="HandsFree Texting allows users to receive and reply to text messages through their Bluetooth audio devices (headsets, cars, etc.). The goal is to allow drivers to stay safe and keep their eyes on the road while texting."/>
+        android:text="HandsFree Texting allows users to receive and reply to text messages through their Bluetooth audio devices (headsets, cars, etc.)."/>
 
     <TextView
         android:layout_width="match_parent"
@@ -49,6 +49,13 @@
         android:textAppearance="?android:attr/textAppearanceMedium"
         android:textColor="#000000"
         android:text="3. Pair up phone with desired Bluetooth device"/>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textAppearance="?android:attr/textAppearanceMedium"
+        android:textColor="#000000"
+        android:text="Note: The service can still work without a Bluetooth device."/>
 
     <TextView
         android:layout_width="match_parent"
